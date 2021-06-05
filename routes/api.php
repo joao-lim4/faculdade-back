@@ -31,7 +31,14 @@ Route::group([
     'middleware' => 'jwt.auth'
 ], function () {
 
+    //vacinados
 	Route::post('vacinados/create', 'VacinadosController@store');
+    Route::post('vacinados/update/{id}', 'VacinadosController@update');
+    Route::get('vacinados/destroy/{id}', 'VacinadosController@destroy');
+    Route::get('vacinados/listar', 'VacinadosController@index');
+    //
+
+
 
 
 });

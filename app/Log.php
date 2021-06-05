@@ -8,7 +8,7 @@ class Log extends Model
 {
     //
 
-    protected $fillable = ['participante_id','tabela','ciente', 'tipo','autenticado','admin', 'email', 'descricao'];
+    protected $fillable = ['user_id','log_message'];
     protected $table = 'logs';
 
 }

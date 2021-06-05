@@ -24,6 +24,43 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends BaseController
 {
+
+    private function createLog($auth, $message = null, $registro = null, $table = null, $type = null)
+    {
+
+        if (!$auth instanceof User) {
+            throw new \Exception("O usuario não tem permissao para continuar. reference log", 401);
+        }
+
+        $messagePadrao = [
+            'Update' => 'O usuario ' . $auth->nome . ' correspondente ao id: ' . $auth->id  . ' atualizou o registro ' . $registro->id . ' na tabela ' . $table . ' as ' . $registro->updated_at->format('H:i:s') . ' do dia ' . $registro->updated_at->format('d/m/Y') . '.',
+            'Post' => 'O usuario ' . $auth->nome . ' correspondente ao id: ' . $auth->id  . ' criou um novo registro correspondente ao id: ' . $registro->id . ' na tabela ' . $table . ' as ' . $registro->created_at->format('H:i:s') . ' do dia ' . $registro->created_at->format('d/m/Y') . '.',
+            'Delete' => 'O usuario ' . $auth->nome . ' correspondente ao id: ' . $auth->id  . ' deletou um registro correspondente ao id: ' . $registro->id . ' na tabela ' . $table . ' as ' . $registro->updated_at->format('H:i:s') . ' do dia ' . $registro->updated_at->format('d/m/Y') . '.'
+        ];
+
+
+        if (is_null($message)) {
+            DB::transaction(function () use ($messagePadrao, $auth, $type, &$response) {
+                Log::create([
+                    'log_message' => $messagePadrao[$type],
+                    'user_id' => $auth->id
+                ]);
+
+                $response = true;
+            });
+        } else {
+            DB::trasaction(function () use ($auth, $message, &$response) {
+                Log::create([
+                    'log_message' => $message,
+                    'user_id' => $auth->id
+                ]);
+                $response = true;
+            });
+        }
+
+
+        return $response;
+    }
     /**
      * AuthController constructor.
      */
@@ -92,13 +129,16 @@ class AuthController extends BaseController
                     $credentials = $request->only('email', 'password');
                     $token = JWTAuth::attempt($credentials);
 
+                    $log = $this->createLog(JWTAuth::user(), null, $newUser, 'users', 'Post');
+
+
                     if(!is_null($token)){
                         $newUser->token = $token;
                         $newUser->save();
                        
                         $response = [
                             "success" => true,
-                            "log" => true,
+                            "log" => $log,
                             "message" => "Usuario criado com sucesso!",
                             "data" => [
                                 "user" => $newUser,
@@ -160,26 +200,19 @@ class AuthController extends BaseController
         $user->token = $token;
         $user->save();
        
-        // $date = $this->getDate();
-        // if($user->admin == 1){
-        //     DB::transaction(function() use($user, $date){
-        //         $data_log = [
-        //             "participante_id" => $user->id,
-        //             "admin" => $user->nome,
-        //             "email" => $user->email,
-        //             "tabela" => "false",
-        //             "ciente" => 1,
-        //             "tipo" => 'LOGIN',
-        //             "autenticado" => 1,
-        //             "descricao" => "O usuario " . $user->nome . ' logou na plataforma no dia ' . $date['day'] . ' no horario: ' . $date['hora'] . ";"
-        //         ];
-        //         Log::create($data_log);
-        //     });
-        // }
+        $date = $this->getDate();
+        
+        DB::transaction(function() use($user, $date){
+            Log::create([
+                "user_id" => $user->id,
+                "log_message" => "O usuario " . $user->nome . ' logou na plataforma no dia ' . $date['day'] . ' no horario: ' . $date['hora'] . ";"
+            ]);
+        });
+        
 
         return response()->json([
             "success" => true,
-            "log" => false,
+            "log" => true,
             "message" => "Usuario logado com sucesso!",
             "data" => [
                 "user" => $user,
