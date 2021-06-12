@@ -22,7 +22,7 @@ class NivelController extends Controller
         if($this->validateKey($data["key"])){
             DB::transaction(function() use($data, &$response){
 
-                $new_nivel = Nivel::create([
+                Nivel::create([
                     "nome" => $data["nome"]
                 ]);
                 

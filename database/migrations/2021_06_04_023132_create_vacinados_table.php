@@ -24,6 +24,7 @@ class CreateVacinadosTable extends Migration
             $table->boolean("assintomatico")->default(0);
             $table->boolean("infectado")->default(0);
             $table->boolean("bebida")->default(0);
+            $table->boolean('vacinado')->default(0);
             $table->string("email", 255);
             $table->string("contato", 255);
             $table->foreign('user_id')->references('id')->on('users');

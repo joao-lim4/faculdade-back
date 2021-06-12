@@ -58,4 +58,8 @@ class User extends Authenticatable implements JWTSubject
     public function vacinados(){
         return $this->hasMany(Vacinado::class);
     }
+
+    public function logs(){
+        return $this->hasMany(Log::class);
+    }
 }

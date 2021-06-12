@@ -112,7 +112,7 @@ class AuthController extends BaseController
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => bcrypt($input['password']),
-                'nivel_id' => $nivel_admin->id,
+                'nivel_id' => isset($input["nivel_id"]) && $input["nivel_id"] ? $input["nivel_id"] : $nivel_admin->id,
                 'path' => 'http://127.0.0.1:8000/assets/users/' . $ImgName . '.' . $file->getClientOriginalExtension(),
             );
             
@@ -225,24 +225,21 @@ class AuthController extends BaseController
 
     public function verificaUsuario(Request $request)
     {
+        $user = JWTAuth::parseToken()->authenticate();
 
-        $participanteAutenticado = JWTAuth::parseToken()->authenticate();
+        if($user instanceof User){
+            return response()->json([
+                'sucesso' => true,
+                'mensagem' => 'Usuario autenticado',
+                'usuario' => $user
+            ], 200);
+        }else{
+            return response()->json([
+                'error' => true,
+                'mensagem' => 'Usuario não autenticado',
+            ], 401);
+        }
 
-        $participante = [
-            'foto' => $participanteAutenticado->admin == 1 ? $participanteAutenticado->path : $participanteAutenticado->foto_perfil,
-            'id' => $participanteAutenticado->id,
-            'nome' => Str::limit($participanteAutenticado->nome, 16),
-            'email' => $participanteAutenticado->email,
-            'admin' => $participanteAutenticado->admin,
-            'created_at' => $participanteAutenticado->created_at,
-            'updated_at' => $participanteAutenticado->updated_at
-        ];
-
-        return response()->json([
-            'sucesso' => true,
-            'mensagem' => 'Usuario autenticado',
-            'usuario' => $participante
-        ], 201);
     }
 
     public function atualizarToken()

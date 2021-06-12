@@ -4,23 +4,9 @@ use Illuminate\Http\Request;
 
 
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
-
-/* Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
- */
 Route::post('login','Auth\AuthController@login');
 Route::post('registrar','Auth\AuthController@registrar');
+Route::get('verificar', 'Auth\AuthController@verificaUsuario');
 
 
 Route::post('nivel/create', 'Api\NivelController@createNivel');
@@ -35,9 +21,19 @@ Route::group([
 	Route::post('vacinados/create', 'VacinadosController@store');
     Route::post('vacinados/update/{id}', 'VacinadosController@update');
     Route::get('vacinados/destroy/{id}', 'VacinadosController@destroy');
+    Route::get('vacinados/show/{id}', 'VacinadosController@show');
     Route::get('vacinados/listar', 'VacinadosController@index');
     //
 
+
+    //statisticas 
+    Route::get('statisticas/small-list', 'StatisticController@smallTasks');
+    Route::get('statisticas/chart-vacinados', 'StatisticController@getMouthVacinados');
+    Route::get('statisticas/ultimos', 'StatisticController@getUltimosVacinados');
+    //
+
+    //log
+    Route::get('log/listar', 'LogController@index');
 
 
 

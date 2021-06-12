@@ -8,20 +8,20 @@ use App\User;
 use App\Vacinado;
 use App\Log;
 use Exception;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Response;
-use Tymon\JWTAuth\JWTAuth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class VacinadosController extends Controller
 {
     
     private function validateImage($request, bool $storage){
         if($request->hasFile('path')){
-            $file = $request->file('path');
-            $ImgName = md5(uniqid(time()));
-            
             if($storage){
+                $file = $request->file('path');
+                $ImgName = md5(uniqid(time()));
                 $file->move(public_path('/assets/vacinados'), $ImgName . '.' . $file->getClientOriginalExtension());    
                 
                 return [
@@ -97,14 +97,14 @@ class VacinadosController extends Controller
                 $q->where('vacinado', $data['vacinado']);
             }
 
-            if (isset($data['data_in'])) {
+            if (isset($data['data_in']) && $data['data_in']) {
                 $dataInicio = Carbon::createFromFormat('d/m/Y', $data['data_in'])->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-                $q->where('data_hora', '>=', $dataInicio);
+                $q->where('created_at', '>=', $dataInicio);
             }
 
-            if (isset($data['data_fim'])) {
+            if (isset($data['data_fim']) && $data['data_fim']) {
                 $dataFim = Carbon::createFromFormat('d/m/Y', $data['data_fim'])->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-                $q->where('data_hora', '<=', $dataFim);
+                $q->where('created_at', '<=', $dataFim);
             }
         };
 
@@ -113,7 +113,7 @@ class VacinadosController extends Controller
             'log' => false,
             'message' => 'Conteudo pesquisado com sucesso!',
             'data' => [
-                'vacinados' => Vacinado::where($where)->get()
+                'vacinados' => Vacinado::with(["usuario"])->where($where)->get()
             ]
         ], 200);
 
@@ -131,7 +131,6 @@ class VacinadosController extends Controller
         
         $data = $request->all();
 
-
         if(!$file = $this->validateImage($request, true)){
             return Response::json([
                 'error' => true,
@@ -148,7 +147,8 @@ class VacinadosController extends Controller
                     'sexo' => $data["sexo"], 
                     'cpf' => $data["cpf"], 
                     'path' => $file["path"], 
-                    'pais' => $file["pais"],
+                    'pais' => $data["pais"],
+                    'vacinado' => $data['vacinado'],
                     'assintomatico' => isset($data["assintomatico"]) ? $data["assintomatico"] : 0, 
                     'infectado' => isset($data["infectado"]) ? $data["infectado"] : 0, 
                     'bebida' => isset($data["bebida"]) ? $data["bebida"] : 0,
@@ -175,6 +175,26 @@ class VacinadosController extends Controller
 
     }
 
+    private function generateText(Vacinado $vacinado){
+        $msg = "";
+
+        if($vacinado->assintomatico == 1){
+            $msg += "O aluno durante a pandemia foi infectado com o SARS COV 2 porém não apresentou sinstomas. ";
+        }else{
+            if($vacinado->infectado == 1){
+                $msg += "O aluno durante a pandemia foi infectado e nescessitou de cuidaddos medicos. ";
+            }else{
+                $msg += "O aluno durante a não tem provas de que foi infectado. ";
+            }
+        }
+
+        if($vacinado->bebida == 1){
+            $msg += "O aluno ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
+        }else{
+            $msg += "O aluno não ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
+        }    
+    }
+
     /**
      * Display the specified resource.
      *
@@ -183,18 +203,35 @@ class VacinadosController extends Controller
      */
     public function show($id)
     {
-
         $vacinado = Vacinado::find($id);
 
-        return Response::json([
-            'success' => true,
-            'log' => false,
-            'message' => 'Vacinado cadastrado com sucesso!',
-            'data' => [
-                'vacinado' => $vacinado,
-            ]
-        ]);
+        if($vacinado instanceof Vacinado){
 
+            $body_messages = "";
+
+            if($vacinado->vacinado === 1){
+                $body_messages = "O aluno(a) " . $vacinado->nome . " ja foi vacinado contra o COVID-19, com as informações armazenadas desse aluno é possivel afirmar que, " . $this->generateText($vacinado) . "";  
+            }else{
+                $body_messages = "Não foi possivel gerar um conteudo sobre esse aluno(a)";  
+
+            }
+
+            return Response::json([
+                'success' => true,
+                'log' => false,
+                'message' => 'Vacinado cadastrado com sucesso!',
+                'data' => [
+                    'vacinado' => $vacinado,
+                    'conteudo' => $body_messages
+                ]
+            ]);
+        }else{
+            return Response::json([
+                'error' => true,
+                'log' => false,
+                'messagee' => 'O vacinado correspondente ao id ' . $id . ' não foi encontrado.'
+            ], 400);
+        }
     }
 
 
@@ -210,11 +247,13 @@ class VacinadosController extends Controller
         
         $vacinado = Vacinado::find($id);
 
+        $data = $request->all();
+
         if(!$vacinado instanceof Vacinado){
             return Response::json([
                 'error' => true,
                 'log' => false,
-                'message' => "O registro correspondente ao id " . $id . " não foi encontrado, revise a sua pesquisa!"
+                'message' => "O registro correspondente ao id " . $id . " não foi encontrado, revise o seu id!"
             ], 400);
         }else{
             
@@ -222,7 +261,7 @@ class VacinadosController extends Controller
                 return Response::json([
                     'error' => true,
                     'log' => false,
-                    'message' => 'Você não tem permissões para apagar esse registro' 
+                    'message' => 'Você não tem permissões para alterar esse registro' 
                 ], 401);
             }
 
@@ -258,6 +297,7 @@ class VacinadosController extends Controller
                     'cpf' => isset($data["cpf"]) ? $data["cpf"] : $vacinado->cpf, 
                     'path' => isset($file["path"]) && $file ? $file["path"] : $vacinado->path,
                     'pais' => isset($data["pais"]) ? $data["pais"] : $vacinado->pais, 
+                    'vacinado' => isset($data["vacinado"]) ? $data["vacinado"] : $vacinado->vacinado, 
                     'assintomatico' => isset($data["assintomatico"]) ? $data["assintomatico"] : $vacinado->assintomatico, 
                     'infectado' => isset($data["infectado"]) ? $data["infectado"] : $vacinado->infectado, 
                     'bebida' => isset($data["bebida"]) ? $data["bebida"] : $vacinado->bebida,
@@ -306,7 +346,7 @@ class VacinadosController extends Controller
             }
 
             DB::transaction(function() use($vacinado, &$response){
-                File::delete(public_path('assets/vacinados') . '/' . $vacinado->path->split('vacinados/')[1]);
+                File::delete(public_path('assets/vacinados') . '/' . explode('vacinados/', $vacinado->path)[1]);
                 Vacinado::destroy($vacinado->id);
 
                 $log = $this->createLog(JWTAuth::user(), null, $vacinado, 'vacinados', 'Delete');

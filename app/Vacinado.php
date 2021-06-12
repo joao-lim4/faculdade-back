@@ -12,6 +12,7 @@ class Vacinado extends Model
         'sexo', 
         'cpf', 
         'path',
+        'vacinado',
         'pais', 
         'assintomatico', 
         'infectado', 
