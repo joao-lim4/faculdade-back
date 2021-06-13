@@ -23,9 +23,23 @@ class StatisticController extends Controller
 
     private function variacaoPercentual(int $v1, int $v2){
         if($v1 > $v2){
-            return (($v1 - $v2) / $v1) * 100;
+            if($v1 != 0 && $v2 == 0){
+                return 100;
+            }else if($v1 == 0){
+                return 0;
+            }else{
+                return (($v1 - $v2) / $v1) * 100;
+            }
+            
+            
         }else{
-            return (($v2 - $v1) / $v1) * 100;
+            if($v2 != 0 && $v1 == 0){
+                return 100;
+            }else if($v2 == 0){
+                return 0;
+            }else{
+                return (($v2 - $v1) / $v1) * 100;
+            }
         }
     }
 
@@ -106,9 +120,9 @@ class StatisticController extends Controller
                 "total_users_otem" => [
                     "label" =>  "Dia anterior",
                     "value" =>  "" . $total_vacinados_otem . "",
-                    "percentage" =>  $total_vacinados_otem > 0 ? "100%" : "0%",
+                    "percentage" => $this->variacaoPercentual($total_vacinados_otem,$total_vacinados_hoje) . "%",
                     "increase" =>  $total_vacinados_otem <= $total_vacinados_hoje ? false : true,
-                    "chartLabels" =>  [null, null, null, null, null, null, null],
+                    "chartLabels" =>  [null, null,],
                     "attrs" =>  [ "md" =>  "6", "sm" =>  "6" ],
                     "datasets" =>  [
                         [
@@ -117,7 +131,7 @@ class StatisticController extends Controller
                             "borderWidth" =>  1.5,
                             "backgroundColor" =>   $total_vacinados_otem > $total_vacinados_hoje ? "rgba(23,198,113,0.1)" : "rgba(255,65,105,0.1)",
                             "borderColor" =>  $total_vacinados_otem > $total_vacinados_hoje ? "rgb(23,198,113)" : "rgb(255,65,105)",
-                            "data" =>  $values_label_vacinados
+                            "data" =>  [$total_vacinados_hoje, $total_vacinados_otem,]
                         ]
                     ]
                 ],

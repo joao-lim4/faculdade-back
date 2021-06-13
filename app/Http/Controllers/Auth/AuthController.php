@@ -257,6 +257,72 @@ class AuthController extends BaseController
         return response()->json(compact('token', 'usuario'));
     }
 
+    public function getUser(){
+        return response()->json([
+            'success' => true,
+            'log' => false,
+            'message' => "Usuario encontrado!",
+            "data" => [
+                "user" => User::find(JWTAuth::user()->id)
+            ]
+        ], 200);
+    }
+
+    public function userUpdate(Request $request){
+
+        $user = User::find(JWTAuth::user()->id);
+
+        if(!$user instanceof User){
+            return response()->json([
+                "errro" => true,
+                "log" => false,
+                "message" => "Sem permissão para continuar!",
+            ], 401);
+        }
+
+
+        if(isset($data["email"]) && $data["email"]){
+            if($data["email"] != $user->email){
+                $email =  User::where("email", $data["email"])->first();
+                if($email instanceof User){
+                    return response()->json([
+                        "errro" => true,
+                        "log" => false,
+                        "message" => "Esse e-mail ja está cadastrado no sistema!",
+                    ], 400);
+                }
+            }
+        }
+
+        $dataUpdata = [
+            'name' => isset($data["name"]) && $data["name"] ? $data['name'] : $user->name,
+            'email' => isset($data["email"]) && $data["email"] ? $data['email'] : $user->email,
+            'password' => isset($data["password"]) && $data["password"] ? bcrypt($data['password']) : $user->password ,
+        ];
+        
+        if($request->hasFile('path')){
+            $file = $request->file('path');
+            $ImgName = md5(uniqid(time()));
+            $file->move(public_path('/assets/users'), $ImgName . '.' . $file->getClientOriginalExtension());
+            $dataUpdata['path'] = 'http://127.0.0.1:8000/assets/users/' . $ImgName . '.' . $file->getClientOriginalExtension();
+        };
+
+
+        DB::transaction(function() use($user, $dataUpdata, &$response){
+            $user->update($dataUpdata);
+
+            $response = [
+                "success" => true,
+                "log" => false,
+                "message" => "Usuario atualizado"
+            ];
+        });
+
+
+        return response()->json($response, 200);
+
+    }
+
     public function checkAuth(){
         if(is_null(Auth::user())){
             return 'false';

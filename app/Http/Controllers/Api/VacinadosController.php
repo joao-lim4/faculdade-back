@@ -285,10 +285,9 @@ class VacinadosController extends Controller
                         ]
                     ], 400);
                 }
-            }
-
-
-            DB::transaction(function() use($data, $vacinado, $file, &$response) {
+            }   
+            
+            DB::transaction(function() use($data, $vacinado,$password, $file, &$response) {
 
                 $vacinado->update([
                     'nome' => isset($data["nome"]) ? $data["nome"] : $vacinado->nome ,
