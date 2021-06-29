@@ -97,10 +97,23 @@ class VacinadosController extends Controller
                 $q->where('vacinado', $data['vacinado']);
             }
 
+            if(isset($data['curso']) && $data['curso']){
+                $q->where('curso', $data['curso']);
+            }
+
+            if(isset($data['turma']) && $data['turma']){
+                $q->where('turma', $data['turma']);
+            }
+
+            if(isset($data['turno']) && $data['turno']){
+                $q->where('turno', $data['turno']);
+            }
+
             if (isset($data['data_in']) && $data['data_in']) {
                 $dataInicio = Carbon::createFromFormat('d/m/Y', $data['data_in'])->setTime(0, 0, 0)->format('Y-m-d H:i:s');
                 $q->where('created_at', '>=', $dataInicio);
             }
+
 
             if (isset($data['data_fim']) && $data['data_fim']) {
                 $dataFim = Carbon::createFromFormat('d/m/Y', $data['data_fim'])->setTime(23, 59, 59)->format('Y-m-d H:i:s');
@@ -148,6 +161,9 @@ class VacinadosController extends Controller
                     'cpf' => $data["cpf"], 
                     'path' => $file["path"], 
                     'pais' => $data["pais"],
+                    'turma' => $data["turma"],
+                    'curso' => $data["curso"],
+                    'turno' => $data["turno"],
                     'vacinado' => $data['vacinado'],
                     'assintomatico' => isset($data["assintomatico"]) ? $data["assintomatico"] : 0, 
                     'infectado' => isset($data["infectado"]) ? $data["infectado"] : 0, 
@@ -179,21 +195,24 @@ class VacinadosController extends Controller
         $msg = "";
 
         if($vacinado->assintomatico == 1){
-            $msg += "O aluno durante a pandemia foi infectado com o SARS COV 2 porém não apresentou sinstomas. ";
+            $msg .= "O aluno durante a pandemia foi infectado com o SARS COV 2 porém não apresentou sinstomas. ";
         }else{
             if($vacinado->infectado == 1){
-                $msg += "O aluno durante a pandemia foi infectado e nescessitou de cuidaddos medicos. ";
+                $msg .= "O aluno durante a pandemia foi infectado e nescessitou de cuidaddos medicos. ";
             }else{
-                $msg += "O aluno durante a não tem provas de que foi infectado. ";
+                $msg .= "O aluno durante a não tem provas de que foi infectado. ";
             }
         }
 
         if($vacinado->bebida == 1){
-            $msg += "O aluno ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
+            $msg .= "O aluno ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
         }else{
-            $msg += "O aluno não ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
-        }    
+            $msg .= "O aluno não ingeriu bebidas alcolicas 14 antes ou depois de ter tomado a vacina. ";
+        }
+        
+        return $msg;
     }
+
 
     /**
      * Display the specified resource.
@@ -212,7 +231,7 @@ class VacinadosController extends Controller
             if($vacinado->vacinado === 1){
                 $body_messages = "O aluno(a) " . $vacinado->nome . " ja foi vacinado contra o COVID-19, com as informações armazenadas desse aluno é possivel afirmar que, " . $this->generateText($vacinado) . "";  
             }else{
-                $body_messages = "Não foi possivel gerar um conteudo sobre esse aluno(a)";  
+                $body_messages = "Não foi possivel gerar um conteúdo sobre esse aluno(a)";  
 
             }
 
@@ -287,7 +306,7 @@ class VacinadosController extends Controller
                 }
             }   
             
-            DB::transaction(function() use($data, $vacinado,$password, $file, &$response) {
+            DB::transaction(function() use($data, $vacinado, $file, &$response) {
 
                 $vacinado->update([
                     'nome' => isset($data["nome"]) ? $data["nome"] : $vacinado->nome ,
@@ -296,6 +315,9 @@ class VacinadosController extends Controller
                     'cpf' => isset($data["cpf"]) ? $data["cpf"] : $vacinado->cpf, 
                     'path' => isset($file["path"]) && $file ? $file["path"] : $vacinado->path,
                     'pais' => isset($data["pais"]) ? $data["pais"] : $vacinado->pais, 
+                    'turma' => isset($data["turma"]) ? $data["turma"] : $vacinado->turma,
+                    'curso' => isset($data["curso"]) ? $data["curso"] : $vacinado->curso,
+                    'turno' => isset($data["turno"]) ? $data["turno"] : $vacinado->turno,
                     'vacinado' => isset($data["vacinado"]) ? $data["vacinado"] : $vacinado->vacinado, 
                     'assintomatico' => isset($data["assintomatico"]) ? $data["assintomatico"] : $vacinado->assintomatico, 
                     'infectado' => isset($data["infectado"]) ? $data["infectado"] : $vacinado->infectado, 

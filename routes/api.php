@@ -45,4 +45,22 @@ Route::group([
     //
     
 
+    //key
+    Route::get("key/generate", "KeyController@generateKey");
+    //
+
+});
+
+
+
+Route::group([
+    'namespace' => 'Auth',
+    'middleware' => 'jwt.auth'
+], function () {
+    
+    //users
+    Route::get("usuarios/listar", "AuthController@listarUsuarios");
+    Route::get("usuarios/show/{id}", "AuthController@showUser");
+    Route::post("usuarios/update/{id}", "AuthController@updateUser");
+
 });

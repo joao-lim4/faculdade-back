@@ -19,12 +19,15 @@ class CreateVacinadosTable extends Migration
             $table->integer("idade");
             $table->string("sexo", 255);
             $table->string("cpf", 255);
-            $table->longText("path", 255);
+            $table->longText("path");
             $table->string("pais");
             $table->boolean("assintomatico")->default(0);
             $table->boolean("infectado")->default(0);
             $table->boolean("bebida")->default(0);
             $table->boolean('vacinado')->default(0);
+            $table->string("turma", 255);
+            $table->string("curso", 255);
+            $table->string("turno", 255);
             $table->string("email", 255);
             $table->string("contato", 255);
             $table->foreign('user_id')->references('id')->on('users');

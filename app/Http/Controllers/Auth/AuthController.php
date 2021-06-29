@@ -10,6 +10,7 @@ use App\Log;
 use \Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Key;
 use App\Nivel;
 use App\User;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use phpDocumentor\Reflection\Types\Integer;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
@@ -75,7 +77,7 @@ class AuthController extends BaseController
         ]);
     }
 
-    private function valideteRegister (string $key, string $email="", bool $request=false){
+    private function valideteRegister (Request $key, string $email="", bool $request=false){
         if($request){
             $user = User::where('email', $email)->first();
             if(!$user instanceof User){
@@ -84,7 +86,38 @@ class AuthController extends BaseController
                 return false;
             }
         }else{
-            return $key == env("KEY");
+            $data = $key->all();
+
+            if(isset($data["key"]) && $data["key"]){
+                
+                $user_register = User::find($data["user_id"]);
+                $nivel_admin = Nivel::where("nome", "Master")->first();
+                
+                if(!$user_register instanceof User){
+                    return false;
+                }else{
+
+                    if($user_register->nivel_id != $nivel_admin->id){
+                        return false;
+                    }
+
+                    $key_intance = Key::where("user_id", $user_register->id)
+                                    ->where("ativa", 1)
+                                    ->first();
+                    
+                    if($key_intance instanceof Key){
+                        if($key_intance->key == $data["key"]){
+                            return true;
+                        }else{
+                            return false;
+                        }
+                    }else{
+                        return false;
+                    }
+                }
+            }else{
+                return false;
+            }
         }
     }
 
@@ -92,14 +125,17 @@ class AuthController extends BaseController
     public function registrar(AuthRequest $request)
     {
         $input = $request->all();
-        $nivel_admin = Nivel::where("nome", "Admin")->first();
+        $nivel_colaborador = Nivel::where("nome", "Colaborador")->first();
+        $inative_key = null;
 
-        if(!$this->valideteRegister($request->key)){
+        if(!$this->valideteRegister($request)){
             return response()->json([
                 "erro" => true,
                 "log" => true,
                 "message" => "Sem autorizacao para executar essa tarefa!"
             ], 401);
+        }else{
+            $inative_key = true;
         }
 
         if($request->hasFile('path')){
@@ -112,22 +148,32 @@ class AuthController extends BaseController
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => bcrypt($input['password']),
-                'nivel_id' => isset($input["nivel_id"]) && $input["nivel_id"] ? $input["nivel_id"] : $nivel_admin->id,
+                'nivel_id' => isset($input["nivel_id"]) && $input["nivel_id"] ? $input["nivel_id"] : $nivel_colaborador->id,
                 'path' => 'http://127.0.0.1:8000/assets/users/' . $ImgName . '.' . $file->getClientOriginalExtension(),
             );
             
 
-            if(!$this->valideteRegister("", $request->email, true)){
+            if(!$this->valideteRegister($request, $request->email, true)){
                 return response()->json([
                         "status" => "Error",
                         "message" => "Esse usuario ja está cadastrado no sistema"
                 ], 200);
             }else{
-                DB::transaction(function() use ($data,$request, &$response){
+                
+                DB::transaction(function() use ($data,$request,$inative_key, &$response){
                     $newUser = User::create($data);
 
                     $credentials = $request->only('email', 'password');
                     $token = JWTAuth::attempt($credentials);
+                    
+                    if($inative_key){
+                        $key_intance = Key::where("user_id", $request->input("user_id"))
+                                        ->where("ativa", 1)
+                                        ->first();
+    
+                        $key_intance->ativa = 0;
+                        $key_intance->save();
+                    }
 
                     $log = $this->createLog(JWTAuth::user(), null, $newUser, 'users', 'Post');
 
@@ -271,6 +317,7 @@ class AuthController extends BaseController
     public function userUpdate(Request $request){
 
         $user = User::find(JWTAuth::user()->id);
+        $data = $request->all();
 
         if(!$user instanceof User){
             return response()->json([
@@ -333,4 +380,123 @@ class AuthController extends BaseController
     {
         return $this->app->getLocale();
     }
+
+
+    public function listarUsuarios(Request $request){
+        $nivel_user = Nivel::where("nome", "Master")->first();
+        $user = JWTAuth::user();
+        $data = $request->all();
+
+        if($nivel_user->id != $user->nivel_id){
+            return response()->json([
+                "error" => true,
+                "log" => false,
+                "message" => "Sem permissão para continuar"
+            ], 400);
+        }
+
+        $where = function($q) use($data) {
+            if(isset($data["nome"]) && $data["nome"]){
+                $q->where("name", "like", "%" . $data["nome"] . "%");
+            }
+
+            if ( isset($data["id"]) && $data["id"] ){
+                $q->where("id", $data["id"]);
+            }
+        };
+
+
+        return response()->json([
+            'success' => true,
+            'log' => true,
+            'message' => "Usuarios pesquisado com sucesso!",
+            "data" => [
+                "usuarios" => User::with(["nivel"])->where($where)->get()
+            ]
+        ], 200);
+    }
+
+    public function showUser(Request $request, $id){
+        
+        $nivel_admin = Nivel::where("nome", "Master")->first();
+        $user = JWTAuth::user();
+
+        if($nivel_admin->id !== $user->nivel_id){
+            return response()->json([
+                "error" => true,
+                "log" => false,
+                "message" => "Sem permissoes para continuar!"
+            ], 400);
+        }
+
+
+        return response()->json([
+            "success" => true,
+            "log" => false,
+            "message" => "Usuario listado com sucesso",
+            "data" => [
+                "usuario" => User::with("nivel")->find($id)
+            ] 
+        ], 200);
+    }
+
+    public function updateUser(Request $request, $id){
+        
+        $userUpdate = User::find($id);
+        $data = $request->all();
+          
+        $nivel_admin = Nivel::where("nome", "Master")->first();
+        $user = JWTAuth::user();
+
+        if($nivel_admin->id !== $user->nivel_id){
+            return response()->json([
+                "error" => true,
+                "log" => false,
+                "message" => "Sem permissoes para continuar!"
+            ], 400);
+        }
+
+        
+        if(isset($data["email"]) && $data["email"]){
+            if($data["email"] != $userUpdate->email){
+                $email =  User::where("email", $data["email"])->first();
+                if($email instanceof User){
+                    return response()->json([
+                        "errro" => true,
+                        "log" => false,
+                        "message" => "Esse e-mail ja está cadastrado no sistema!",
+                    ], 400);
+                }
+            }
+        }
+      
+        $dataUpdate = [
+            'name' => isset($data["name"]) && $data["name"] ? $data["name"] : $userUpdate->name,
+            'email' => isset($data["email"]) && $data["email"] ? $data["email"] : $userUpdate->email,
+            'password' => isset($data["password"]) && $data["password"] ? bcrypt($data["password"]) : $userUpdate->password,
+            'nivel_id' => isset($data["nivel_id"]) && $data["nivel_id"] ? $data["nivel_id"] : $userUpdate->nivel_id,
+        ];
+
+        if($request->hasFile('path')){
+            $file = $request->file('path');
+            $ImgName = md5(uniqid(time()));
+            $file->move(public_path('/assets/users'), $ImgName . '.' . $file->getClientOriginalExtension());
+            $dataUpdate["path"] = 'http://127.0.0.1:8000/assets/users/' . $ImgName . '.' . $file->getClientOriginalExtension();
+        }
+
+        DB::transaction(function() use($dataUpdate, &$response, $userUpdate) {
+            $userUpdate->update($dataUpdate);
+
+            $response = [
+                "success" => true,
+                "log" => false,
+                "message" => "Usuario atualizado com sucesso!",
+            ];
+
+        });
+
+
+        return $response;
+    }
+
 }

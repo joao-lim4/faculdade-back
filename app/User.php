@@ -62,4 +62,8 @@ class User extends Authenticatable implements JWTSubject
     public function logs(){
         return $this->hasMany(Log::class);
     }
+
+    public function key(){
+        return $this->hasOne(Key::class, 'user_id');
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Documento;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\User;
@@ -11,6 +12,9 @@ use Illuminate\Support\Facades\Response;
 
 class StatisticController extends Controller
 {   
+
+   
+
     private function getDate(){
         date_default_timezone_set('America/Sao_Paulo');
         $date = date('d/m/y h:i:s', time());
@@ -76,6 +80,9 @@ class StatisticController extends Controller
         }
 
 
+        $total_docs = Documento::where("id", "!=", 0)->count();
+
+
         return Response::json([
             "success" => true,
             "log" => false,
@@ -84,8 +91,8 @@ class StatisticController extends Controller
                 "total_vacinados" =>  [
                     "label" => "Vacinados",
                     "value" => "" . $total_vacinados . "",
-                    "percentage" => "100%",
-                    "increase" => true,
+                    "percentage" => $total_vacinados > 0 ? "100%" : "0%" ,
+                    "increase" => $total_vacinados > 0 ? true : false,
                     "chartLabels" => [null, null, null, null, null, null, null],
                     "attrs" => [ "md" => "6", "sm" => "6" ],
                     "datasets" => [
@@ -95,7 +102,7 @@ class StatisticController extends Controller
                             "borderWidth" => 1.5,
                             "backgroundColor" => "rgba(23,198,113,0.1)",
                             "borderColor" => "rgb(23,198,113)",
-                            "data" => [1, 2, 3, 3, 3, 4, 4]
+                            "data" => $total_vacinados > 0 ? [1, 2, 3, 3, 3, 4, 4] : [0, 0, 0, 0, 0, 0, 0]
                         ]
                     ]
                 ],
@@ -136,7 +143,7 @@ class StatisticController extends Controller
                     ]
                 ],
                 "total_users" =>  [
-                    "label" => "Usuarios",
+                    "label" => "Usuários",
                     "value" => "" . $total_users . "",
                     "percentage" => "100%",
                     "increase" => true,
@@ -155,9 +162,9 @@ class StatisticController extends Controller
                 ],
                 "total_docs" =>  [
                     "label" => "Documentos",
-                    "value" => "0",
-                    "percentage" => "0%",
-                    "increase" => false,
+                    "value" => $total_docs,
+                    "percentage" => $total_docs > 0 ? "100%" : "0%",
+                    "increase" => $total_docs > 0 ? true : false,
                     "chartLabels" => [null, null, null, null, null, null, null],
                     "attrs" => [ "md" => "6", "sm" => "6" ],
                     "datasets" => [
@@ -167,7 +174,7 @@ class StatisticController extends Controller
                             "borderWidth" => 1.5,
                             "backgroundColor" => "rgba(23,198,113,0.1)",
                             "borderColor" => "rgb(23,198,113)",
-                            "data" => [0, 0, 0, 0, 0, 0, 0]
+                            "data" => $total_docs > 0 ? [14,7, 15, 13, 12, 5, 10] : [0,0, 0, 0, 0, 0, 0]
                         ]
                     ]
                 ],

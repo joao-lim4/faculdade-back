@@ -19,6 +19,9 @@ class Vacinado extends Model
         'bebida',
         'email',
         'contato',
+        'turma',
+        'curso',
+        'turno',
         'user_id'
     ];
 
